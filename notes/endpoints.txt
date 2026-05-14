@@ -1,0 +1,36 @@
+	POST   /login
+	POST   /logout
+	GET	   /users/:id
+	POST   /users
+	PUT	   /users/:id
+	DELETE /users/:id
+
+	GET    /statistics						//get general status info (app count, org count, recent activity, etc)
+
+	//applications/jobs
+	GET    /applications 					//get all apps, with filtering options
+		?statusId=#							//filter list by status
+		?organizationId=#					//filter list by employer
+	GET    /applications/:id				//get one specific app
+	POST   /applications					//create a new app
+	PUT	   /applications/:id				//update an existing app
+	DELETE /applications/:id				//delete an entire app
+	
+	//organizations/employers
+	GET    /organizations					//gets a list of organizations
+	GET	   /organizations/:id				//get info on a specific org
+	GET    /organizations/:id/applications	//gets a list of applications tied to an organization
+	POST   /organizations					//create a new org
+	PUT    /organizations/:id				//update an org
+	DELETE /organizations/:id				//delete an org
+	
+	//items with selectable options
+	GET	   /statuses						//gets a list of statuses
+	GET    /sources							//gets a list of sources
+
+	//application data (reference during applying)
+	GET    /appdata							//gets all app data for that user
+	GET	   /appdata/:id						//gets one single entry
+	POST   /appdata							//adds a new data entry
+	PUT    /appdata/:id						//updates a specific data entry
+	DELETE /appdata/:id						//deletes a data entry

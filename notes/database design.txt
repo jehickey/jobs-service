@@ -1,0 +1,154 @@
+db notes:
+	* how to do triggers in postgres and when?  ON UPDATE
+	* explicit foreign keys
+		* for posgres we'll create the FK's after (for reasons)
+	* password hashing:
+		* send as plaintext during user creation, but hash in table
+		* use bcrypt (good Go support)
+
+
+Sessions table:
+	* need a session table to track logins
+	* maybe this should be how user's last login is tracked (instead of on user)
+	* structure:
+CREATE TABLE sessions (
+    sessionid TEXT PRIMARY KEY,
+    userid    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires   TIMESTAMPTZ NOT NULL
+);
+
+	
+Database:
+	//each table with an "updated" field has a trigger to update the date
+	//userid fk uses on delete cascade, but nothing else
+	//if deleting an organization, set all references to it to null first
+		//any event that points to an app or organization being deleted should have reference set to null (or delete if that was the only ref)
+	//statues, sources, and other list items can be set to active=false so they can be "removed" without breaking references
+
+	* users
+		* id			SERIAL			PRIMARY KEY
+		* name			text
+		* username		text NOT NULL
+		* passwordhash	text NOT NULL
+		* created		TIMESTAMPTZ  DEFAULT now()
+		* updated		TIMESTAMPTZ  DEFAULT now()
+		* lastlogin		TIMESTAMPTZ
+
+	* statuses
+		* id		SERIAL				PRIMARY KEY
+		* label		varchar(16)  NOT NULL
+		* listorder int			 NOT NULL default 0
+		* active	bool		 NOT NULL										//in case one is decommissioned but still in use
+
+	* sources	//job sites that individual jobs came from
+		* id		SERIAL					PRIMARY KEY
+		* name		text NOT NULL
+		* url		text
+		* listorder	int NOT NULL DEFAULT 0
+		* active	bool NOT NULL								//in case one is decommissioned but still in use
+
+
+	* applications
+		* id				SERIAL		PRIMARY KEY
+		* userid			INT	 NOT NULL		REFERENCES users(id)
+		* organizationid	INT			REFERENCES organizations(id)	//what company/organization is it?
+		* position			text										//name of position applied for
+		* dateapplied		TIMESTAMPTZ									//date of initial application
+		* lastresponse		TIMESTAMPTZ									//date of last status change
+		* statusid			INT		 NOT NULL default 0	REFERENCES statuses(id)			//status of application
+		* jobposting		text										//text of the job description
+		* notes				text										//any notes entered about it
+		* url				text										//site for tracking status, when present
+		* siteuser			text										//username for accessing relevant job site
+		* sitepass			text										//suggested: don't use full pass, just a reminder
+		* sourceid			INT			REFERENCES sources(id)			//site you got the job posting from
+		* created			TIMESTAMPTZ  DEFAULT now()
+		* updated			TIMESTAMPTZ  DEFAULT now()
+
+	* organizations
+		* id		SERIAL				PRIMARY KEY
+		* userid	int		 NOT NULL			REFERENCES users(id)
+		* name		text NOT NULL
+		* url		text
+		* created	TIMESTAMPTZ  DEFAULT now()
+		* updated	TIMESTAMPTZ  DEFAULT now()
+	
+
+	* contacts
+		* id				SERIAL		PRIMARY KEY
+		* userid			int	 NOT NULL		REFERENCES users(id)
+		* organizationid	int			REFERENCES organizations(id)
+		* name				text
+		* email				text
+		* phone				text
+		* other				text
+		* notes				text
+		* created			TIMESTAMPTZ  DEFAULT now()
+		* updated			TIMESTAMPTZ  DEFAULT now()
+	
+
+	* eventtypes
+		* id			SERIAL			PRIMARY KEY
+		* label			text NOT NULL
+		* listorder		int NOT NULL default 0
+		* active		bool NOT NULL											//in case one is decommissioned but still in use
+	
+	* events
+		* id				SERIAL		PRIMARY KEY
+		* userid			int		 NOT NULL	REFERENCES users(id)
+		* applicationid		int			REFERENCES applications(id)
+		* organizationid	int			REFERENCES organizations(id)
+		* eventtypeid		int	 NOT NULL default 0		REFERENCES eventtypes(id)
+		* name				text
+		* date				TIMESTAMPTZ
+		* notes				text
+		* created			TIMESTAMPTZ  DEFAULT now()
+		* updated			TIMESTAMPTZ  DEFAULT now()
+
+
+	* appdata	//general information used for applications
+		* id			SERIAL			PRIMARY KEY
+		* userid		int		 NOT NULL		REFERENCES users(id)
+		* subject		text
+		* content		text
+		* created		TIMESTAMPTZ  DEFAULT now()
+		* updated		TIMESTAMPTZ  DEFAULT now()
+
+FOREIGN KEYS:
+  userid       	 > users(id)			ON DELETE CASCADE
+  applicationid  > applications(id)		ON DELETE SET NULL
+  organizationid > organizations(id)	ON DELETE SET NULL
+  statusid       > statuses(id)			ON DELETE RESTRICT
+  eventtypeid    > eventtypes(id)		ON DELETE RESTRICT
+  sourceid       > sources(id)			ON DELETE RESTRICT
+
+//prevent similar user names on two accounts
+ALTER TABLE users ADD CONSTRAINT users_username_unique UNIQUE(username);
+ALTER TABLE statuses ADD UNIQUE(label);
+ALTER TABLE sources ADD UNIQUE(name);
+ALTER TABLE eventtypes ADD UNIQUE(label);
+
+
+//create trigger function
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+//done on each table:  (what about insert?)
+CREATE TRIGGER set_timestamp
+BEFORE UPDATE ON applications
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+//foreign keys
+ALTER TABLE applications
+ADD CONSTRAINT fk_applications_user
+FOREIGN KEY (userid) REFERENCES users(id)
+ON DELETE CASCADE;  //or ON DELETE SET NULL;
+
+
