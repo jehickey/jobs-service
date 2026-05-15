@@ -1,0 +1,5 @@
+Planned Features:
+
+* Download all data to a text file
+* unlogged users see demo information (from a hardcoded user?)
+
