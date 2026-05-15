@@ -39,8 +39,9 @@ func FetchUserData(ctx context.Context, username string) (UserData, error) {
 func FetchSessionData(ctx context.Context, sessionId string) (SessionData, error) {
 	data := SessionData{}
 	err := DB.QueryRow(ctx,
-		"SELECT sessionid, userid, expires FROM sessions WHERE sessionid=$1", sessionId,
-	).Scan(&data.SessionId, &data.UserId, &data.Expires)
+		//"SELECT sessionid, userid, expires FROM sessions WHERE sessionid=$1", sessionId,
+		"SELECT sessionid, userid, expires, a.name, a.username FROM sessions inner join users a on a.id = userid WHERE sessionid=$1 AND expires > Now() AND active=true", sessionId,
+	).Scan(&data.SessionId, &data.UserId, &data.Expires, &data.Name, &data.UserName)
 	return data, err
 }
 
@@ -61,6 +62,7 @@ func DoesUsernameExistInDB(ctx context.Context, username string) (bool, error) {
 		log.Printf("Error getting username count: %+v", err)
 		return false, err
 	}
+
 	return count > 0, nil
 }
 

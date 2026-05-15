@@ -37,6 +37,21 @@ CREATE TABLE eventtypes (
     active     BOOLEAN NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.sessions
+(
+    sessionid text COLLATE pg_catalog."default" NOT NULL,
+    userid integer NOT NULL,
+    created timestamp with time zone NOT NULL DEFAULT now(),
+    expires timestamp with time zone NOT NULL,
+    active boolean NOT NULL DEFAULT true,
+    CONSTRAINT sessions_pkey PRIMARY KEY (sessionid),
+    CONSTRAINT sessions_userid_fkey FOREIGN KEY (userid)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
+
+
 ------------------------------------------------------------
 -- INSERT "NONE" ROWS (id = 0)
 ------------------------------------------------------------

@@ -13,6 +13,8 @@ type SessionData struct {
 	UserId    int       `json:"userId"`
 	Created   time.Time `json:"created"`
 	Expires   time.Time `json:"expires"`
+	Name      string    `json:"name"`
+	UserName  string    `json:"userName"`
 }
 
 type UserData struct {
@@ -26,7 +28,7 @@ type UserData struct {
 }
 
 func GenerateSessionID() string {
-	b := make([]byte, 32) // 256 bits
+	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {
 		return ""
