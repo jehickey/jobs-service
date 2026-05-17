@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"log"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -96,7 +97,7 @@ func UserLogout(c *gin.Context) {
 		return
 	}
 
-	session, err := FetchSessionData(c.Request.Context(), sessionId)
+	_, err := FetchSessionData(c.Request.Context(), sessionId)
 	if err == nil {
 		//db command to terminate the session
 	}
@@ -164,4 +165,107 @@ func UserCreate(c *gin.Context) {
 
 	c.JSON(200, resp)
 	return
+}
+
+/// APPLICATIONS
+
+func CreateApplication(c *gin.Context) {
+	log.Printf("creating application")
+	userid := GetUserFromSession(c)
+	if userid == 0 {
+		c.Status(401)
+		return
+	}
+	appId, err := CreateApplicationInDB(c.Request.Context(), int64(userid))
+	if err != nil {
+		c.Status(500)
+		log.Printf("Got error while creating application: %v", err)
+		return
+	}
+	log.Printf("Got id while creating application: %v", appId)
+	c.JSON(200, gin.H{"applicationId": appId})
+}
+
+func GetApplication(c *gin.Context) {
+	userid := GetUserFromSession(c)
+	if userid == 0 {
+		c.Status(401)
+		return
+	}
+	appId, err := strconv.Atoi(c.Param("id"))
+	if appId == 0 || err != nil {
+		c.Status(401)
+		return
+	}
+	//get the app
+	data, err := FetchApplication(c.Request.Context(), appId, userid)
+	c.JSON(200, data) //return the app
+}
+
+func UpdateApplication(c *gin.Context) {
+	userId := GetUserFromSession(c)
+	log.Printf("Update App Request: user:%v session:", userId)
+	if userId == 0 {
+		c.Status(401)
+		return
+	}
+	appId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		appId = 0
+	}
+	fieldName := c.Param("field")
+
+	var body struct {
+		Value string `json:"value"`
+	}
+	if err := c.BindJSON(&body); err != nil {
+		c.Status(400)
+		return
+	}
+
+	log.Printf("Update App Request: app:%v user:%v %v=%v", appId, userId, fieldName, body.Value)
+
+	//does the user own this app?
+	own := VerifyApplicationOwnership(c.Request.Context(), appId, userId)
+	if own == false {
+		log.Printf("Update App ownership fail: app:%v is not owned by user:%v", appId, userId)
+		c.Status(401)
+		return
+	}
+
+	log.Printf("Updating Application: app:%v user:%v %v=%v", appId, userId, fieldName, body.Value)
+	//update a field
+	err = UpdateApplicationField(c.Request.Context(), appId, fieldName, body.Value)
+	if err != nil { //problem with editing
+		log.Printf("Update failed: %v", err)
+		c.Status(500)
+		return
+	}
+
+	c.Status(200)
+}
+
+func DeleteApplication(c *gin.Context) {
+	userid := GetUserFromSession(c)
+	if userid == 0 {
+		c.Status(401)
+		return
+	}
+	//does the user own this app?
+	//delete it
+}
+
+func GetApplicationList(c *gin.Context) {
+	userId := GetUserFromSession(c)
+	if userId == 0 {
+		c.Status(401)
+		return
+	}
+	list, err := FetchApplicationList(c.Request.Context(), userId)
+	if err != nil {
+		log.Printf("FetchApplicationList failed for user %d: %v", userId, err)
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, list)
 }
