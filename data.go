@@ -47,6 +47,12 @@ type ApplicationData struct {
 	Updated      time.Time `json:"updated"`
 }
 
+type ListData struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
+}
+
 func GenerateSessionID() string {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)

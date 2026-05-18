@@ -269,3 +269,14 @@ func GetApplicationList(c *gin.Context) {
 	}
 	c.JSON(200, list)
 }
+
+func GetStatusList(c *gin.Context) {
+	userId := GetUserFromSession(c)
+	if userId == 0 {
+		c.Status(401)
+		return
+	}
+	list := FetchStatusList(c.Request.Context())
+	c.JSON(200, list)
+
+}

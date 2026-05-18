@@ -177,3 +177,25 @@ func FetchApplicationList(ctx context.Context, userId int) ([]ApplicationData, e
 	}
 	return apps, rows.Err()
 }
+
+func FetchStatusList(ctx context.Context) []ListData {
+	results := []ListData{}
+	sql := `select id, label as name, color from statuses order by listorder asc`
+	rows, err := DB.Query(ctx, sql)
+	if err != nil {
+		log.Printf("DB Error in FetchStatusList: %v", err.Error())
+		return nil
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var data ListData
+		err := rows.Scan(&data.ID, &data.Name, &data.Color)
+		if err != nil {
+			log.Printf("DB Error in FetchStatusList rowscan: %v", err.Error())
+			return nil
+		}
+		results = append(results, data)
+	}
+	//log.Printf("Statuses results: %v", results)
+	return results
+}

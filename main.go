@@ -33,5 +33,7 @@ func main() {
 	r.PATCH("/applications/:id/:field", UpdateApplication)
 	r.DELETE("/applications/:id", DeleteApplication)
 
+	r.GET("/statuses", GetStatusList)
+
 	r.Run("0.0.0.0:8081")
 }
